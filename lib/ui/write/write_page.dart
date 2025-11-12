@@ -1,13 +1,18 @@
-
 import 'package:flutter/material.dart';
+import 'package:flutter_blog_app/model/post.dart';
+import 'package:flutter_blog_app/ui/write/write_view_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class WritePage extends StatefulWidget {
+class WritePage extends ConsumerStatefulWidget {
+  WritePage(this.post);
+
+  Post? post;
+
   @override
-  State<WritePage> createState() => _WritePageState();
+  ConsumerState<WritePage> createState() => _WritePageState();
 }
 
-class _WritePageState extends State<WritePage> {
-
+class _WritePageState extends ConsumerState<WritePage> {
   TextEditingController writeController = TextEditingController();
   TextEditingController titleController = TextEditingController();
   TextEditingController contentController = TextEditingController();
@@ -24,6 +29,11 @@ class _WritePageState extends State<WritePage> {
 
   @override
   Widget build(BuildContext context) {
+    final writeState = ref.watch(writeViewModelProvider(widget.post));
+    if (writeState.isWriting) {
+      return Scaffold(appBar: AppBar(), body: CircularProgressIndicator());
+    }
+
     return GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
@@ -32,9 +42,21 @@ class _WritePageState extends State<WritePage> {
         appBar: AppBar(
           actions: [
             GestureDetector(
-              onTap: () {
-                print("Done button");
-                final result = formKey.currentState?.validate() ?? false ;
+              onTap: () async {
+                final result = formKey.currentState?.validate() ?? false;
+                if (result) {
+                  final vm = ref.read(
+                    writeViewModelProvider(widget.post).notifier,
+                  );
+                  final insertResult = await vm.insert(
+                    writer: writeController.text, 
+                    title: titleController.text, 
+                    content: contentController.text,
+                  );
+                  if(insertResult) {
+                    Navigator.pop(context);
+                  }
+                }
               },
               child: Container(
                 width: 50,
@@ -62,7 +84,7 @@ class _WritePageState extends State<WritePage> {
                 textInputAction: TextInputAction.done,
                 decoration: InputDecoration(hintText: "Writer"),
                 validator: (value) {
-                  if(value?.trim().isEmpty ?? true) {
+                  if (value?.trim().isEmpty ?? true) {
                     return "Write writer's name";
                   }
                   return null;
@@ -73,7 +95,7 @@ class _WritePageState extends State<WritePage> {
                 textInputAction: TextInputAction.done,
                 decoration: InputDecoration(hintText: "Title"),
                 validator: (value) {
-                  if(value?.trim().isEmpty ?? true) {
+                  if (value?.trim().isEmpty ?? true) {
                     return "Write the title";
                   }
                   return null;
@@ -88,14 +110,14 @@ class _WritePageState extends State<WritePage> {
                   textInputAction: TextInputAction.newline,
                   decoration: InputDecoration(hintText: "Content"),
                   validator: (value) {
-                    if(value?.trim().isEmpty ?? true) {
+                    if (value?.trim().isEmpty ?? true) {
                       return "Write your content";
                     }
                     return null;
                   },
                 ),
               ),
-              SizedBox(height: 20,),
+              SizedBox(height: 20),
               Align(
                 alignment: Alignment.centerRight,
                 child: Container(
